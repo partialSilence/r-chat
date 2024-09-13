@@ -91,7 +91,7 @@ impl IntoResponse for AuthError {
 }
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: String,
+    pub sub: i32,
     pub exp: usize,
 }
 #[async_trait]
@@ -101,7 +101,7 @@ where
 {
     type Rejection = AuthError;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await

@@ -59,7 +59,8 @@ pub async fn initialize_db(pool: &Pool) -> Result<(), DbHelperError> {
             )
         })
         .await??;
-    init_users(&pool).await
+    init_users(&pool).await?;
+    crate::chat_api::messages::create_table_messages(&pool).await
 }
 
 #[derive(Debug)]
@@ -67,6 +68,7 @@ pub enum DbHelperError {
     SqliteError(rusqlite::Error),
     DeadpoolError(deadpool_sqlite::InteractError),
     PoolError(deadpool_sqlite::PoolError),
+    PermissionDenied(String)
 }
 impl fmt::Display for DbHelperError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -74,15 +76,25 @@ impl fmt::Display for DbHelperError {
             DbHelperError::SqliteError(ref err) => write!(f, "SqliteError: {}", err),
             DbHelperError::DeadpoolError(ref err) => write!(f, "DeadpoolError: {}", err),
             DbHelperError::PoolError(ref err) => write!(f, "PoolError: {}", err),
+            DbHelperError::PermissionDenied(ref message) => write!(f, "BusinessError: {message}")
         }
     }
 }
 impl Error for DbHelperError {
-    fn cause(&self) -> Option<&dyn Error> {
+    // fn cause(&self) -> Option<&dyn Error> {
+    //     match *self {
+    //         DbHelperError::SqliteError(ref err) => Some(err),
+    //         DbHelperError::DeadpoolError(ref err) => Some(err),
+    //         DbHelperError::PoolError(ref err) => Some(err),
+    //         DbHelperError::PermissionDenied(_) => None
+    //     }
+    // }
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
         match *self {
-            DbHelperError::SqliteError(ref err) => Some(err),
-            DbHelperError::DeadpoolError(ref err) => Some(err),
-            DbHelperError::PoolError(ref err) => Some(err),
+            DbHelperError::SqliteError(ref err) => Some(err.source()?),
+            DbHelperError::DeadpoolError(ref err) => Some(err.source()?),
+            DbHelperError::PoolError(ref err) => Some(err.source()?),
+            DbHelperError::PermissionDenied(_) => None
         }
     }
 }
